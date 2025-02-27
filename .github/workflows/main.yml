@@ -4,14 +4,15 @@ on: [push, workflow_dispatch]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
     - name: Download ngrok
       run: wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz -O ngrok.tgz
+
     - name: Extract ngrok
       run: tar -xvzf ngrok.tgz
+
     - name: Auth ngrok
       run: ./ngrok authtoken $NGROK_AUTH_TOKEN
       env:
@@ -25,15 +26,30 @@ jobs:
         sudo systemctl enable xrdp
         sudo systemctl start xrdp
 
-    - name: Configure xrdp
+    - name: Configure xrdp and XFCE
       run: |
         echo "xfce4-session" > ~/.xsession
+        chmod +x ~/.xsession
         sudo sed -i 's/port=3389/port=3390/g' /etc/xrdp/xrdp.ini
+        echo "export XDG_CONFIG_DIRS=/etc/xdg" | sudo tee -a /etc/profile
         sudo systemctl restart xrdp
 
     - name: Set Password for User
       run: |
         echo "runneradmin:P@ssw0rd!" | sudo chpasswd
 
-    - name: Create Tunnel
-      run: ./ngrok tcp 3390
+    - name: Create and Maintain Tunnel
+      run: |
+        # Inicia o ngrok em background e salva os logs
+        ./ngrok tcp 3390 --log=stdout > ngrok.log 2>&1 &
+        
+        # Aguarda o túnel ser estabelecido
+        sleep 10
+        
+        # Exibe a URL pública do túnel
+        echo "Túnel ngrok ativo. URL pública:"
+        curl -s http://localhost:4040/api/tunnels | jq -r .tunnels[0].public_url
+        
+        # Mantém o workflow rodando enquanto exibe logs em tempo real
+        echo "Mantendo o workflow ativo. Conecte-se ao túnel via RDP."
+        tail -f ngrok.log
