@@ -40,6 +40,9 @@ jobs:
 
     - name: Create and Maintain Tunnel
       run: |
+        # Mata qualquer processo ngrok existente (caso haja)
+        pkill ngrok || true
+        
         # Inicia o ngrok em background e salva os logs
         ./ngrok tcp 3390 --log=stdout > ngrok.log 2>&1 &
         
@@ -50,6 +53,6 @@ jobs:
         echo "Túnel ngrok ativo. URL pública:"
         curl -s http://localhost:4040/api/tunnels | jq -r .tunnels[0].public_url
         
-        # Mantém o workflow rodando enquanto exibe logs em tempo real
+        # Mantém o workflow rodando enquanto exibe logs
         echo "Mantendo o workflow ativo. Conecte-se ao túnel via RDP."
         tail -f ngrok.log
