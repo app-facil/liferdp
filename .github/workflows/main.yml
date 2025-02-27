@@ -30,6 +30,7 @@ jobs:
         echo "xfce4-session" > ~/.xsession
         echo "export XDG_CONFIG_DIRS=/etc/xdg/xdg-xfce:/etc/xdg" >> ~/.xsession
         echo "export XDG_DATA_DIRS=/usr/share/xfce4:/usr/share:/usr/local/share" >> ~/.xsession
+        sudo usermod -aG xfce runneradmin
         sudo sed -i 's/port=3389/port=3390/g' /etc/xrdp/xrdp.ini
         sudo systemctl restart xrdp
 
