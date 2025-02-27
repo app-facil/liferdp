@@ -36,4 +36,4 @@ jobs:
         echo "runneradmin:P@ssw0rd!" | sudo chpasswd
 
     - name: Create Tunnel
-      run: ./ngrok tcp 3389
+      run: ./ngrok tcp 3390
