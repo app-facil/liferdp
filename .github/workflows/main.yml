@@ -8,40 +8,33 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Download ngrok
-      run: wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz -O ngrok.tgz
-    - name: Extract ngrok
-      run: tar -xvzf ngrok.tgz
-    - name: Auth ngrok
-      run: ./ngrok authtoken $NGROK_AUTH_TOKEN
-      env:
-        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
-
-    - name: Install XFCE and xrdp
+    - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y xfce4 xfce4-goodies xorg dbus-x11 x11-xserver-utils
-        sudo apt-get install -y xrdp
-        sudo systemctl enable xrdp
-        sudo systemctl start xrdp
+        sudo apt-get install -y xfce4 xfce4-goodies xorg dbus-x11 x11-apps
 
-    - name: Configure xrdp
+    - name: Download and Install ngrok
       run: |
-        echo "xfce4-session" > ~/.xsession
-        echo "export XDG_CONFIG_DIRS=/etc/xdg/xdg-xfce:/etc/xdg" >> ~/.xsession
-        echo "export XDG_DATA_DIRS=/usr/share/xfce4:/usr/share:/usr/local/share" >> ~/.xsession
-        sudo usermod -aG xfce runneradmin
-        sudo sed -i 's/port=3389/port=3390/g' /etc/xrdp/xrdp.ini
-        sudo systemctl restart xrdp
+        wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz
+        tar -xzf ngrok-v3-stable-linux-amd64.tgz
+        chmod +x ngrok
 
-    - name: Set Password for User
+    - name: Authenticate ngrok
+      run: ./ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
+
+    - name: Start XFCE and ngrok in a loop
       run: |
-        echo "runneradmin:P@ssw0rd!" | sudo chpasswd
+        while true; do
+          # Start XFCE
+          startxfce4 &
+          XFCE_PID=$!
 
-    - name: Verify XFCE Installation
-      run: |
-        dpkg -l | grep xfce4
-        dpkg -l | grep xrdp
+          # Start ngrok tunnel for X11 (port 5900 for VNC)
+          ./ngrok tcp 5900
 
-    - name: Create Tunnel
-      run: ./ngrok tcp 3390
+          # Wait for XFCE to exit (if it does)
+          wait $XFCE_PID
+
+          # If XFCE exits, restart it
+          echo "XFCE exited, restarting..."
+        done
