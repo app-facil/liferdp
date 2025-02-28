@@ -1,0 +1,47 @@
+name: CI
+
+on: [push, workflow_dispatch]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y xfce4 xfce4-goodies xorg dbus-x11 x11-apps xrdp
+
+    - name: Download and Install ngrok
+      run: |
+        wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz
+        tar -xzf ngrok-v3-stable-linux-amd64.tgz
+        chmod +x ngrok
+
+    - name: Authenticate ngrok
+      run: ./ngrok authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
+
+    - name: Configure XRDP
+      run: |
+        sudo systemctl enable xrdp
+        sudo systemctl start xrdp
+        echo "xfce4-session" > ~/.xsession
+
+    - name: Set Password for User
+      run: |
+        echo "runneradmin:P@ssw0rd!" | sudo chpasswd
+
+    - name: Start ngrok and XRDP in a loop
+      run: |
+        while true; do
+          # Start ngrok tunnel for RDP (port 3389)
+          ./ngrok tcp 3389 &
+          NGROK_PID=$!
+
+          # Keep the script running
+          wait $NGROK_PID
+
+          # If ngrok exits, restart it
+          echo "ngrok exited, restarting..."
+        done
