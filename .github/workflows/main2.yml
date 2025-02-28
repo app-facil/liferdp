@@ -27,10 +27,17 @@ jobs:
         sudo systemctl enable xrdp
         sudo systemctl start xrdp
         echo "xfce4-session" > ~/.xsession
+        chmod +x ~/.xsession
 
     - name: Set Password for User
       run: |
         echo "runneradmin:P@ssw0rd!" | sudo chpasswd
+
+    - name: Fix Environment Variables
+      run: |
+        echo 'export XDG_CONFIG_DIRS="/etc/xdg/xdg-xfce:/etc/xdg"' >> ~/.bashrc
+        echo 'export XDG_DATA_DIRS="/usr/share/xfce4:/usr/share:/usr/local/share"' >> ~/.bashrc
+        source ~/.bashrc
 
     - name: Start ngrok and XRDP in a loop
       run: |
