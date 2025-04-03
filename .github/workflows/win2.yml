@@ -26,7 +26,7 @@ jobs:
     - name: Set user password
       run: |
         $password = ConvertTo-SecureString -AsPlainText "$Env:RDP_PASSWORD" -Force
-        Set-LocalUser -Name "admin" -Password $password
+        Set-LocalUser -Name "runneradmin" -Password $password
       env:
         RDP_PASSWORD: ${{ secrets.RDP_PASSWORD }}  # Defina uma senha forte nos secrets do GitHub
 
@@ -42,7 +42,7 @@ jobs:
     - name: Show RDP connection details
       run: |
         echo "URL do Ngrok: ${{ steps.ngrok.outputs.url }}"
-        echo "Usuário: admin"
+        echo "Usuário: runneradmin"
         echo "Senha: ${{ secrets.RDP_PASSWORD }}"
         echo "Mantenha este workflow aberto para manter o túnel ativo!"
 
