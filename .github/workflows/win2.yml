@@ -1,0 +1,50 @@
+name: windowsCI
+on: [workflow_dispatch]  # Removi "push" para evitar execução acidental
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Download ngrok
+      run: Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
+
+    - name: Extract ngrok
+      run: Expand-Archive ngrok.zip
+
+    - name: Authenticate ngrok
+      run: .\ngrok\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
+      env:
+        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+
+    - name: Enable Remote Desktop
+      run: |
+        Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Value 0
+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+        Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" -Name "UserAuthentication" -Value 1
+
+    - name: Set user password
+      run: |
+        $password = ConvertTo-SecureString -AsPlainText "$Env:RDP_PASSWORD" -Force
+        Set-LocalUser -Name "admin" -Password $password
+      env:
+        RDP_PASSWORD: ${{ secrets.RDP_PASSWORD }}  # Defina uma senha forte nos secrets do GitHub
+
+    - name: Start ngrok tunnel (RDP)
+      run: |
+        Start-Process -NoNewWindow -FilePath ".\ngrok\ngrok.exe" -ArgumentList "tcp 3389 --log=stdout"
+        # Espera 10 segundos para ngrok iniciar
+        Start-Sleep -Seconds 10
+        # Extrai a URL do ngrok (funciona apenas na versão v3+)
+        curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url'
+      id: ngrok
+
+    - name: Show RDP connection details
+      run: |
+        echo "URL do Ngrok: ${{ steps.ngrok.outputs.url }}"
+        echo "Usuário: admin"
+        echo "Senha: ${{ secrets.RDP_PASSWORD }}"
+        echo "Mantenha este workflow aberto para manter o túnel ativo!"
+
+    - name: Keep alive
+      run: Start-Sleep -Seconds 3600  # Mantém o job ativo por 1 hora
