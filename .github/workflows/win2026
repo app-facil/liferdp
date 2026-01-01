@@ -1,0 +1,33 @@
+name: Windows-RDP-6Hours
+
+on: [workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - name: Download e Extração
+      run: |
+        Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
+        Expand-Archive ngrok.zip -DestinationPath .
+
+    - name: Autenticar ngrok
+      run: .\ngrok.exe authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
+
+    - name: Configurar RDP e Senha
+      run: |
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
+        $password = ConvertTo-SecureString "${{ secrets.RDP_PASSWORD }}" -AsPlainText -Force
+        Set-LocalUser -Name "admin" -Password $password
+
+    - name: Iniciar Túnel e Bloquear Finalização
+      run: |
+        # Inicia o ngrok em uma janela separada para não travar o log
+        Start-Process powershell -ArgumentList "-NoExit -Command '.\ngrok.exe tcp 3389'"
+        Write-Host "--- TÚNEL ATIVADO ---"
+        Write-Host "Verifique o endereço no painel do ngrok (dashboard.ngrok.com)"
+        
+        # Mantém o script vivo por 6 horas (21600 segundos)
+        Start-Sleep -Seconds 21600
